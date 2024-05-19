@@ -7,19 +7,19 @@ export const publishMessage = async (msg: string) => {
     const params: AWS.SNS.PublishInput = {
       Message: msg,
       TopicArn: process.env.TOPIC_ARN,
-      Subject: "This is subject of message"
-    }
-    var publishText = await sns.publish(params).promise();
+      Subject: "This is subject of message",
+    };
+    const publishText = await sns.publish(params).promise();
     return publishText;
   } catch (err) {
     console.log("An error occurred: ", err);
     throw err;
   }
-}
+};
 
 export const listenMessage = (req: express.Request, res: express.Response) => {
   const dataChunks: string[] = []; // assumed type as string
-  req.on("data", (chunk: any) => {
+  req.on("data", (chunk: string) => {
     dataChunks.push(chunk);
   });
   req.on("end", () => {
@@ -28,10 +28,13 @@ export const listenMessage = (req: express.Request, res: express.Response) => {
     res.status(200).send("SUCCESS");
   });
   req.on("error", () => {
-    console.log("Received an error, with partial message as: ", JSON.parse(JSON.stringify(dataChunks.join(""))))
+    console.log(
+      "Received an error, with partial message as: ",
+      JSON.parse(JSON.stringify(dataChunks.join(""))),
+    );
     res.status(500).send("Message retireival has an error");
   });
   req.on("close", () => {
     console.log("close event occurred");
   });
-}
+};

@@ -20,9 +20,8 @@ if (cluster.isMaster) {
     console.log("A worker exited with id: ", worker.id);
     cluster.fork();
   });
-
 } else {
   app.listen(3000, () => {
     console.log("Server is started");
-  })
+  });
 }
