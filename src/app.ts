@@ -1,14 +1,17 @@
 import * as express from "express";
 import { config } from "dotenv";
-import * as AWS from "aws-sdk";
+//import * as AWS from "aws-sdk";
+ import { SNSClient } from "@aws-sdk/client-sns";
+
 import { SMS } from "./sms/types";
-import { sendSMS } from "./sms/sms.service";
+//import { sendSMS } from "./sms/sms.service";
+import { sendSMSMessage } from "./sms/sms.service";
 import { sendEmail } from "./email/email.service";
 import { publishMessage, listenMessage } from "./http/http.service";
 
-AWS.config.update({
-  region: process.env.AWS_REGION,
-});
+// AWS.config.update({
+//   region: process.env.AWS_REGION,
+// });
 
 config();
 
@@ -40,19 +43,46 @@ app.post("/publish", async (_req: express.Request, res: express.Response) => {
 });
 
 app.post("/sms", async (req: express.Request, res: express.Response) => {
-  const msg = req.body as SMS;
+ const msg = req.body as SMS;
+ (async () => {
+  const params = {
+      Message: msg.message,  //`Your OTP code sent by Ashutosh Singh is: ${Math.random().toString().substring(2,6)}`, // Generate a 6-digit OTP code
+      PhoneNumber:msg.phone, 
+      MessageAttributes: {
+        'AWS.SNS.SMS.SenderID': {
+            'DataType': 'String',
+            'StringValue': msg.subject
+        },
+        "AWS.SNS.SMS.SMSType": {
+            'DataType': 'String',
+            'StringValue': msg.msgType
+        }
+      }
+  };
+
+  // Create an SNS client with the specified configuration
+  const sns = new SNSClient([{
+      region: process.env.AWS_REGION, // AWS region from environment variables
+      credentials: {
+          accessKeyId: process.env.AWS_ACCESS_KEY_ID, // AWS access key from environment variables
+          secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY // AWS secret key from environment variables
+      }
+  }]);
+
   try {
-    const publishText = await sendSMS(msg);
+    const publishText = await sendSMSMessage(sns , params); //await sendSMS(msg);
     res.end(JSON.stringify({ MessageID: publishText.MessageId }));
   } catch (err) {
     console.log("An error occurred: ", err);
     res.end(JSON.stringify({ Error: err }));
   }
+})();
+  
 });
 
 app.post("/email", async (_req: express.Request, res: express.Response) => {
   try {
-    const resp = await sendEmail();
+    const resp = await sendEmail("ashutoshsinghe@gmail.com","Ashutosh Singh"); //sendEmail();
     res.send(resp);
   } catch (err) {
     console.log(err);
